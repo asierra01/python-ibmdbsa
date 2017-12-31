@@ -189,6 +189,12 @@ class DB2Dialect_ibm_db(DB2Dialect):
         return self.normalize_name(connection.connection.get_current_schema())
 
 
+    def render_literal_value(self, value, type_):
+        value = super(DB2Dialect_ibm_db, self).render_literal_value(value, type_)
+        if self.dialect._backslash_escapes:
+           value = value.replace('\\', '\\\\')
+           return value
+
     # Checks if the DB_API driver error indicates an invalid connection
     def is_disconnect(self, ex, connection, cursor):
         if isinstance(ex, (self.dbapi.ProgrammingError,

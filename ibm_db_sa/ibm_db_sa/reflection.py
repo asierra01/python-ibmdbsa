@@ -96,6 +96,7 @@ class DB2Reflector(BaseReflector):
       Column("OWNERTYPE", CoerceUnicode, key="ownertype"),
       Column("TYPE", CoerceUnicode, key="type"),
       Column("STATUS", CoerceUnicode, key="status"),
+      Column("REMARKS", CoerceUnicode, key="remarks"),
       schema="SYSCAT")
 
     sys_indexes = Table("INDEXES", ischema,
@@ -145,6 +146,7 @@ class DB2Reflector(BaseReflector):
       Column("NULLS", CoerceUnicode, key="nullable"),
       Column("IDENTITY", CoerceUnicode, key="identity"),
       Column("GENERATED", CoerceUnicode, key="generated"),
+      Column("REMARKS", CoerceUnicode, key="remarks"),
       schema="SYSCAT")
 
     sys_views = Table("VIEWS", ischema,
@@ -186,10 +188,10 @@ class DB2Reflector(BaseReflector):
     def get_schema_names(self, connection, **kw):
         sysschema = self.sys_schemas
         query = sql.select([sysschema.c.schemaname],
-            sql.not_(sysschema.c.schemaname.like('SYS%')),
+            sql.not_(sysschema.c.schemaname.like(u'SYS%')),
             order_by=[sysschema.c.schemaname]
         )
-        return [self.normalize_name(r[0]) for r in connection.execute(query)]
+        return [self.normalize_name(r[0].strip()) for r in connection.execute(query)]
 
 
     @reflection.cache
@@ -232,7 +234,8 @@ class DB2Reflector(BaseReflector):
         query = sql.select([syscols.c.colname, syscols.c.typename,
                             syscols.c.defaultval, syscols.c.nullable,
                             syscols.c.length, syscols.c.scale,
-                            syscols.c.identity, syscols.c.generated],
+                            syscols.c.identity, syscols.c.generated,
+                            syscols.c.remarks],
               sql.and_(
                   syscols.c.tabschema == current_schema,
                   syscols.c.tabname == table_name
@@ -260,6 +263,7 @@ class DB2Reflector(BaseReflector):
                     'type': coltype,
                     'nullable': r[3] == 'Y',
                     'default': r[2] or None,
+                    'comment' : r[8] or None,
                     'autoincrement': (r[6] == 'Y') and (r[7] != ' '),
                 })
         return sa_columns
